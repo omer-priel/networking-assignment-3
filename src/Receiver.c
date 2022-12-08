@@ -14,7 +14,7 @@
 #include <signal.h>
 
 // Flags
-#define SERVER_PORT 5060 // The port that the server listens
+#include "config.h"
 
 int main()
 {

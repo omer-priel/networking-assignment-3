@@ -13,9 +13,7 @@
 #include <sys/socket.h>
 #include <unistd.h>
 
-// Flags
-#define SERVER_PORT 5060
-#define SERVER_IP_ADDRESS "127.0.0.1"
+#include "config.h"
 
 int main()
 {
