@@ -1,0 +1,13 @@
+# Editor configuration, see http://editorconfig.org
+
+root = true
+
+[*]
+charset = utf-8
+
+[*.md]
+insert_final_newline = true
+
+[*.{c,h}]
+insert_final_newline = true
+max_line_length = 120

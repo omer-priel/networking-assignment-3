@@ -1,0 +1,10 @@
+# C compiled files
+.o
+.so
+.a
+
+# build
+bin
+
+Receiver
+Sender
