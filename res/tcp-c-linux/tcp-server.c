@@ -1,5 +1,5 @@
 /*
-    Receiver
+    TCP/IP-server
 */
 
 #include <stdio.h>
@@ -13,7 +13,6 @@
 #include <errno.h>
 #include <signal.h>
 
-// Flags
 #define SERVER_PORT 5060 // The port that the server listens
 
 int main()
@@ -87,7 +86,7 @@ int main()
         printf("A new client connection accepted\n");
 
         // Reply to client
-        char message[] = "I am Receiver\n";
+        char message[] = "Welcome to our TCP-server\n";
         int messageLen = strlen(message) + 1;
 
         int bytesSent = send(clientSocket, message, messageLen, 0);

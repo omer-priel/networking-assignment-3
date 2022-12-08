@@ -1,5 +1,5 @@
 /*
-    Sender
+    TCP/IP client
 */
 
 #include <stdio.h>
@@ -13,7 +13,6 @@
 #include <sys/socket.h>
 #include <unistd.h>
 
-// Flags
 #define SERVER_PORT 5060
 #define SERVER_IP_ADDRESS "127.0.0.1"
 
@@ -51,7 +50,7 @@ int main()
     printf("connected to server\n");
 
     // Sends some data to server
-    char message[] = "I am Sender\n";
+    char message[] = "Good morning, Vietnam\n";
     int messageLen = strlen(message) + 1;
 
     int bytesSent = send(sock, message, messageLen, 0);
