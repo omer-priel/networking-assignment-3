@@ -9,6 +9,15 @@ BIN_DIR=./bin
 clean:
 	rm -rf bin "$(PROJECT_DIR)/Receiver" "$(PROJECT_DIR)/Sender"
 
+install:
+	cd scripts
+	poetry install
+
+create-inputs:
+	rm -rf inputs
+	mkdir inputs
+	cd scripts && poetry run lorem_text --words 10000 > ../inputs/input.txt
+
 # units
 $(BIN_DIR):
 	mkdir $(BIN_DIR)

@@ -3,6 +3,10 @@
 .so
 .a
 
+# python
+.venv
+poetry.lock
+
 # build
 bin
 
