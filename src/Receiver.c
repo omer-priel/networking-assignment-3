@@ -49,7 +49,7 @@ int app_send(int sock, char *message, int messageLen)
 
 int app_recv_part(int clientSocket, char *socketBuffer, long *averageTime)
 {
-    int partSize;
+    int partSize = 0;
 
     int recvesFramesCount = 0;
 
@@ -58,7 +58,7 @@ int app_recv_part(int clientSocket, char *socketBuffer, long *averageTime)
 
     if (recvBytesCount == -1)
     {
-        printf("ERROR: recv() failed");
+        printf("ERROR: recv() failed\n");
         return -1;
     }
 
@@ -68,7 +68,7 @@ int app_recv_part(int clientSocket, char *socketBuffer, long *averageTime)
 
         if (recvBytesCount == -1)
         {
-            printf("ERROR: recv() failed");
+            printf("ERROR: recv() failed\n");
             return -1;
         }
 
@@ -82,7 +82,7 @@ int app_recv_part(int clientSocket, char *socketBuffer, long *averageTime)
 
         if (recvBytesCount == -1)
         {
-            printf("ERROR: recv() failed");
+            printf("ERROR: recv() failed\n");
             return -1;
         }
 
@@ -94,6 +94,10 @@ int app_recv_part(int clientSocket, char *socketBuffer, long *averageTime)
         clock_t endClock = clock();
 
         *averageTime = (endClock - startClock) / recvesFramesCount;
+    }
+    else
+    {
+        return -1;
     }
 
     return 0;
@@ -165,7 +169,7 @@ int main()
         if (clientSocket == -1)
         {
             printf("ERROR: Listen failed with error code: %d\n", errno);
-            close(listeningSocket);
+            close(clientSocket);
         }
         else
         {
@@ -179,14 +183,22 @@ int main()
             {
                 loadNextFile = 0;
 
+                if (connectionWay == 2)
+                {
+                    // Change the connection way to way A
+                    connectionWay = 1;
+                    printf("INFO: Change the connection way to way A\n");
+                }
+
                 // recve the first part of the file
                 int errorcode = app_recv_part(clientSocket, socketBuffer, &averageTimeA);
 
                 if (errorcode != -1)
                 {
                     // send the authentication
-                    int idsXor = AUTHOR_A_ID ^ AUTHOR_B_ID;
+                    int idsXor = AUTHOR_A_ID_LAST_4 ^ AUTHOR_B_ID_LAST_4;
                     errorcode = app_send(clientSocket, (char *)&idsXor, sizeof(int));
+                    sleep(1);
                 }
 
                 if (errorcode != -1)
@@ -201,7 +213,7 @@ int main()
 
                 if (errorcode == -1)
                 {
-                    close(listeningSocket);
+                    close(clientSocket);
                 }
                 else
                 {
@@ -213,7 +225,7 @@ int main()
                     if (recvBytesCount == -1)
                     {
                         printf("ERROR: recv() failed\n");
-                        close(listeningSocket);
+                        close(clientSocket);
                     }
                     else
                     {
@@ -227,7 +239,8 @@ int main()
                             printf("First part take: %ld\n", averageTimeA);
                             printf("Second part take: %ld\n", averageTimeB);
 
-                            close(listeningSocket);
+                            close(clientSocket);
+                            sleep(1);
                         }
                     }
                 }

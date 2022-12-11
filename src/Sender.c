@@ -48,11 +48,11 @@ int load_input_file(char **partA, int *partASize, char **partB, int *partBSize)
     *partA = malloc(sizeof(int) + (*partASize));
     *partB = malloc(sizeof(int) + (*partBSize));
 
-    memcpy(*partA, &partASize, sizeof(int));
-    memcpy(*partB, &partBSize, sizeof(int));
+    memcpy(*partA, partASize, sizeof(int));
+    memcpy(*partB, partBSize, sizeof(int));
 
-    fread(*(partA + sizeof(int)), *partASize, sizeof(int), file);
-    fread(*(partB + sizeof(int)), *partBSize, sizeof(int), file);
+    fread(*partA + sizeof(int), *partASize, *partASize, file);
+    fread(*partB + sizeof(int), *partBSize, *partBSize, file);
 
     // close the file
     fclose(file);
@@ -60,7 +60,7 @@ int load_input_file(char **partA, int *partASize, char **partB, int *partBSize)
     return 0;
 }
 
-int connect_to_server(struct sockaddr_in *serverAddress2)
+int connect_to_server(struct sockaddr_in *serverAddress)
 {
     // create a client socket
     int sock = socket(AF_INET, SOCK_STREAM, 0);
@@ -72,12 +72,11 @@ int connect_to_server(struct sockaddr_in *serverAddress2)
     }
 
     // config and save the server address
-    struct sockaddr_in serverAddress;
-    memset(&serverAddress, 0, sizeof(serverAddress));
+    bzero(serverAddress, sizeof(*serverAddress));
 
-    serverAddress.sin_family = AF_INET;
-    serverAddress.sin_port = htons(SERVER_PORT);
-    int rval = inet_pton(AF_INET, (const char *)SERVER_IP_ADDRESS, &serverAddress.sin_addr);
+    serverAddress->sin_family = AF_INET;
+    serverAddress->sin_port = htons(SERVER_PORT);
+    int rval = inet_pton(AF_INET, (const char *)SERVER_IP_ADDRESS, &serverAddress->sin_addr);
     if (rval <= 0)
     {
         printf("ERROR: inet_pton() failed\n");
@@ -85,7 +84,7 @@ int connect_to_server(struct sockaddr_in *serverAddress2)
     }
 
     // conent to the server
-    if (connect(sock, (struct sockaddr *)&serverAddress, sizeof(serverAddress)) == -1)
+    if (connect(sock, (struct sockaddr *)serverAddress, sizeof(*serverAddress)) == -1)
     {
         printf("ERROR: connect() failed with error code: %d\n", errno);
         return -1;
@@ -144,6 +143,8 @@ int main()
 
     printf("INFO: connected to server\n");
 
+    sleep(1);
+
     int action = 1;
     while (action == 1)
     {
@@ -155,15 +156,17 @@ int main()
 
         printf("INFO: First hafe of the file was successfully sent.\n");
 
+        sleep(1);
+
         // recive the authentication
-        int authentication;
-        if (app_send(sock, (char *)&authentication, sizeof(int)) == -1)
+        int authentication = 0;
+        if (recv(sock, (char *)&authentication, sizeof(int), 0) == -1)
         {
             return -1;
         }
 
         // print the authentication
-        printf("The authentication key is %d", authentication);
+        printf("The authentication key is %d\n", authentication);
 
         // Change the connection way to way B
         printf("INFO: Change the connection way to way B\n");
@@ -174,13 +177,15 @@ int main()
             return -1;
         }
 
+        sleep(1);
+
         printf("INFO: Second hafe of the file was successfully sent.\n");
 
         // ask the user if to send the file again
-        printf("Send the file again? [yes/no] ");
+        printf("Send the file again [yes/no]? ");
 
         char line[1024];
-        scanf("%[^\n]", line);
+        scanf("%s", line);
 
         action = (line[0] == 'y') ? 1 : 0;
 
@@ -190,6 +195,8 @@ int main()
             {
                 return -1;
             }
+
+            sleep(1);
 
             // Change the connection way to way A
             printf("INFO: Change the connection way to way A\n");
