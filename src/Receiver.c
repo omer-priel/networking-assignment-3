@@ -13,104 +13,229 @@
 #include <errno.h>
 #include <signal.h>
 
+#include <time.h> // for measuring time
+
 // Flags
 #include "config.h"
 
+// functions declarations
+int app_send(int sock, char *message, int messageLen);
+int app_recv_part(int clientSocket, char *socketBuffer, long *averageTime);
+int main();
+
+// functions implementations
+inline int app_send(int sock, char *message, int messageLen)
+{
+    int bytesSent = send(sock, message, messageLen, 0);
+
+    if (-1 == bytesSent)
+    {
+        printf("ERROR: send() failed with error code: %d", errno);
+        return -1;
+    }
+    else if (0 == bytesSent)
+    {
+        printf("ERROR: Peer has closed the TCP connection prior to send().\n");
+        return -1;
+    }
+    else if (messageLen > bytesSent)
+    {
+        printf("ERROR: Sent only %d bytes from the required %d.\n", messageLen, bytesSent);
+        return -1;
+    }
+
+    return 0;
+}
+
+int app_recv_part(int clientSocket, char *socketBuffer, long *averageTime)
+{
+    int partSize;
+
+    int recvesFramesCount = 0;
+
+    clock_t startClock = clock();
+    int recvBytesCount = recv(clientSocket, &partSize, sizeof(int), 0);
+
+    if (recvBytesCount == -1)
+    {
+        printf("ERROR: recv() failed");
+        return -1;
+    }
+
+    while (partSize >= SERVER_CHUNK_SIZE)
+    {
+        recvBytesCount = recv(clientSocket, socketBuffer, SERVER_CHUNK_SIZE, 0);
+
+        if (recvBytesCount == -1)
+        {
+            printf("ERROR: recv() failed");
+            return -1;
+        }
+
+        partSize -= recvBytesCount;
+        recvesFramesCount++;
+    }
+
+    if (partSize > 0)
+    {
+        recvBytesCount = recv(clientSocket, socketBuffer, recvBytesCount, 0);
+
+        if (recvBytesCount == -1)
+        {
+            printf("ERROR: recv() failed");
+            return -1;
+        }
+
+        recvesFramesCount++;
+    }
+
+    if (recvesFramesCount > 0)
+    {
+        clock_t endClock = clock();
+
+        *averageTime = (endClock - startClock) / recvesFramesCount;
+    }
+
+    return 0;
+}
+
 int main()
 {
-    signal(SIGPIPE, SIG_IGN); // on linux to prevent crash on closing socket
+    signal(SIGPIPE, SIG_IGN);
 
     // Open the listening (server) socket
     int listeningSocket = -1;
 
     if ((listeningSocket = socket(AF_INET, SOCK_STREAM, 0)) == -1)
     {
-        printf("Could not create listening socket : %d", errno);
+        printf("ERROR: Could not create listening socket: %d\n", errno);
     }
 
     // Reuse the address if the server socket on was closed
     // and remains for 45 seconds in TIME-WAIT state till the final removal.
-    //
     int enableReuse = 1;
     if (setsockopt(listeningSocket, SOL_SOCKET, SO_REUSEADDR, &enableReuse, sizeof(int)) < 0)
     {
-        printf("setsockopt() failed with error code : %d", errno);
+        printf("ERROR: setsockopt() failed with error code : %d\n", errno);
     }
 
-    // "sockaddr_in" is the "derived" from sockaddr structure
-    // used for IPv4 communication. For IPv6, use sockaddr_in6
-    //
+    // bind all the server addresses to the listening socket
     struct sockaddr_in serverAddress;
-    memset(&serverAddress, 0, sizeof(serverAddress));
+    bzero(&serverAddress, sizeof(serverAddress));
 
     serverAddress.sin_family = AF_INET;
     serverAddress.sin_addr.s_addr = INADDR_ANY;
-    serverAddress.sin_port = htons(SERVER_PORT); // network order
-
-    // Bind the socket to the port with any IP at this port
+    serverAddress.sin_port = htons(SERVER_PORT);
     if (bind(listeningSocket, (struct sockaddr *)&serverAddress, sizeof(serverAddress)) == -1)
     {
-        printf("Bind failed with error code : %d", errno);
-        // TODO: close the socket
+        printf("ERROR: Bind failed with error code: %d\n", errno);
+        close(listeningSocket);
         return -1;
     }
 
-    printf("Bind() success\n");
-
-    // Make the socket listening; actually mother of all client sockets.
-    if (listen(listeningSocket, 500) == -1) // 500 is a Maximum size of queue connection requests
-                                            // number of concurrent connections
+    // start to listen for accepts
+    if (listen(listeningSocket, MAXIMUM_CONNECTIONS) == -1)
     {
-        printf("listen() failed with error code : %d", errno);
-        // TODO: close the socket
+        printf("ERROR: listen() failed with error code: %d\n", errno);
+        close(listeningSocket);
         return -1;
     }
 
-    // Accept and incoming connection
-    printf("Waiting for incoming TCP-connections...\n");
-
-    struct sockaddr_in clientAddress; //
+    struct sockaddr_in clientAddress;
     socklen_t clientAddressLen = sizeof(clientAddress);
+
+    char socketBuffer[SERVER_CHUNK_SIZE];
+    int connectionWay = 1;
 
     while (1)
     {
+        if (connectionWay == 2)
+        {
+            // Change the connection way to way A
+            connectionWay = 1;
+            printf("INFO: Change the connection way to way A\n");
+        }
+
+        // wating for client accept
+        printf("INFO: Waiting for client accept\n");
+
         memset(&clientAddress, 0, sizeof(clientAddress));
         clientAddressLen = sizeof(clientAddress);
         int clientSocket = accept(listeningSocket, (struct sockaddr *)&clientAddress, &clientAddressLen);
         if (clientSocket == -1)
         {
-            printf("listen failed with error code : %d", errno);
-            // TODO: close the sockets
-            return -1;
-        }
-
-        printf("A new client connection accepted\n");
-
-        // Reply to client
-        char message[] = "I am Receiver\n";
-        int messageLen = strlen(message) + 1;
-
-        int bytesSent = send(clientSocket, message, messageLen, 0);
-        if (-1 == bytesSent)
-        {
-            printf("send() failed with error code : %d", errno);
-        }
-        else if (0 == bytesSent)
-        {
-            printf("peer has closed the TCP connection prior to send().\n");
-        }
-        else if (messageLen > bytesSent)
-        {
-            printf("sent only %d bytes from the required %d.\n", messageLen, bytesSent);
+            printf("ERROR: Listen failed with error code: %d\n", errno);
+            close(listeningSocket);
         }
         else
         {
-            printf("message was successfully sent .\n");
+            printf("INFO: A new client connection accepted\n");
+
+            long averageTimeA;
+            long averageTimeB;
+
+            int loadNextFile = 1;
+            while (loadNextFile == 1)
+            {
+                loadNextFile = 0;
+
+                // recve the first part of the file
+                int errorcode = app_recv_part(clientSocket, socketBuffer, &averageTimeA);
+
+                if (errorcode != -1)
+                {
+                    // send the authentication
+                    int idsXor = AUTHOR_A_ID ^ AUTHOR_B_ID;
+                    errorcode = app_send(clientSocket, (char *)&idsXor, sizeof(int));
+                }
+
+                if (errorcode != -1)
+                {
+                    // Change the connection way to way B
+                    connectionWay = 2;
+                    printf("INFO: Change the connection way to way B\n");
+
+                    // recve the second part of the file
+                    errorcode = app_recv_part(clientSocket, socketBuffer, &averageTimeB);
+                }
+
+                if (errorcode == -1)
+                {
+                    close(listeningSocket);
+                }
+                else
+                {
+                    // check if to exist
+                    char hasNext;
+
+                    int recvBytesCount = recv(clientSocket, &hasNext, sizeof(char), 0);
+
+                    if (recvBytesCount == -1)
+                    {
+                        printf("ERROR: recv() failed\n");
+                        close(listeningSocket);
+                    }
+                    else
+                    {
+                        if (hasNext == 'Y')
+                        {
+                            loadNextFile = 1;
+                        }
+                        else
+                        {
+                            // Print out the times.
+                            printf("First part take: %ld\n", averageTimeA);
+                            printf("Second part take: %ld\n", averageTimeB);
+
+                            close(listeningSocket);
+                        }
+                    }
+                }
+            }
         }
     }
 
-    // TODO: All open clientSocket descriptors should be kept
-    // in some container and closed as well.
+    // close the listening socket - never
     close(listeningSocket);
 
     return 0;

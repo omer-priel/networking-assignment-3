@@ -6,6 +6,12 @@
 // The ip that of the server (Receiver)
 #define SERVER_IP_ADDRESS "127.0.0.1"
 
+// maximum connections to the server
+#define MAXIMUM_CONNECTIONS 1024
+
+// maximum of SERVER_CHUNK_SIZE size
+#define SERVER_CHUNK_SIZE 1024
+
 // input file path
 #define INPUT_FILE_PATH "./inputs/input.txt"
 
