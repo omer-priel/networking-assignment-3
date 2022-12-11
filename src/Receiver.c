@@ -24,7 +24,7 @@ int app_recv_part(int clientSocket, char *socketBuffer, long *averageTime);
 int main();
 
 // functions implementations
-inline int app_send(int sock, char *message, int messageLen)
+int app_send(int sock, char *message, int messageLen)
 {
     int bytesSent = send(sock, message, messageLen, 0);
 

@@ -16,17 +16,16 @@
 #include "config.h"
 
 // functions declarations
-int load_input_file(char **partA, size_t *partASize, char **partB, size_t *partBSize);
+int load_input_file(char **partA, int *partASize, char **partB, int *partBSize);
 int connect_to_server();
 int app_send(int sock, char *message, int messageLen);
-
 int main();
 
 // functions implementations
 /**
  * Load file into to parts when the first bytes of each parts saved the size of the part
  */
-inline int load_input_file(char **partA, size_t *partASize, char **partB, size_t *partBSize)
+int load_input_file(char **partA, int *partASize, char **partB, int *partBSize)
 {
     FILE *file;
 
@@ -49,11 +48,11 @@ inline int load_input_file(char **partA, size_t *partASize, char **partB, size_t
     *partA = malloc(sizeof(int) + (*partASize));
     *partB = malloc(sizeof(int) + (*partBSize));
 
-    memcpy(partA, &partASize, sizeof(int));
-    memcpy(partB, &partBSize, sizeof(int));
+    memcpy(*partA, &partASize, sizeof(int));
+    memcpy(*partB, &partBSize, sizeof(int));
 
-    fread(*partA, *partASize, sizeof(int), file);
-    fread(*partB, *partBSize, sizeof(int), file);
+    fread(*(partA + sizeof(int)), *partASize, sizeof(int), file);
+    fread(*(partB + sizeof(int)), *partBSize, sizeof(int), file);
 
     // close the file
     fclose(file);
@@ -61,7 +60,7 @@ inline int load_input_file(char **partA, size_t *partASize, char **partB, size_t
     return 0;
 }
 
-inline int connect_to_server()
+int connect_to_server(struct sockaddr_in *serverAddress2)
 {
     // create a client socket
     int sock = socket(AF_INET, SOCK_STREAM, 0);
@@ -74,7 +73,7 @@ inline int connect_to_server()
 
     // config and save the server address
     struct sockaddr_in serverAddress;
-    bzero(&serverAddress, sizeof(serverAddress));
+    memset(&serverAddress, 0, sizeof(serverAddress));
 
     serverAddress.sin_family = AF_INET;
     serverAddress.sin_port = htons(SERVER_PORT);
@@ -92,10 +91,12 @@ inline int connect_to_server()
         return -1;
     }
 
+    printf("connected to server\n");
+
     return sock;
 }
 
-inline int app_send(int sock, char *message, int messageLen)
+int app_send(int sock, char *message, int messageLen)
 {
     int bytesSent = send(sock, message, messageLen, 0);
 
@@ -122,10 +123,10 @@ int main()
 {
     // Load the file
     char *partA;
-    size_t partASize;
+    int partASize;
 
     char *partB;
-    size_t partBSize;
+    int partBSize;
 
     if (load_input_file(&partA, &partASize, &partB, &partBSize) == -1)
     {
@@ -133,7 +134,8 @@ int main()
     }
 
     // Connenting to the server
-    int sock = connect_to_server();
+    struct sockaddr_in serverAddress;
+    int sock = connect_to_server(&serverAddress);
 
     if (sock == -1)
     {
@@ -145,7 +147,7 @@ int main()
     int action = 1;
     while (action == 1)
     {
-        // Send first hafe of the file
+        // Send first hafe of the files
         if (app_send(sock, partA, partASize) == -1)
         {
             return -1;
@@ -184,8 +186,20 @@ int main()
 
         if (action == 1)
         {
+            if (app_send(sock, "Y", 1) == -1)
+            {
+                return -1;
+            }
+
             // Change the connection way to way A
             printf("INFO: Change the connection way to way A\n");
+        }
+        else
+        {
+            if (app_send(sock, "N", 1) == -1)
+            {
+                return -1;
+            }
         }
     }
 

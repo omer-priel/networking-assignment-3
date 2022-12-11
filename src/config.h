@@ -1,9 +1,9 @@
 #pragma once
 
-// The port that the server (Receiver) listens
+// The port that the server listens
 #define SERVER_PORT 5060
 
-// The ip that of the server (Receiver)
+// The ip that of the server
 #define SERVER_IP_ADDRESS "127.0.0.1"
 
 // maximum connections to the server
