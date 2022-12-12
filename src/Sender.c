@@ -13,6 +13,8 @@
 #include <sys/socket.h>
 #include <unistd.h>
 
+#include <netinet/tcp.h>
+
 #include "config.h"
 
 // functions declarations
@@ -170,8 +172,13 @@ int main()
         // print the authentication
         printf("The authentication key is %d\n", authentication);
 
-        // Change the connection way to way B
-        printf("INFO: Change the connection way to way B\n");
+        // Change congestion control to "reno"
+        printf("INFO: Change congestion control to reno\n");
+        if (setsockopt(sock, IPPROTO_TCP, TCP_CONGESTION, "reno", 5) != 0)
+        {
+            printf("ERROR: setsockopt()");
+            return -1;
+        }
 
         // Send second hafe of the file
         if (app_send(sock, partB, partBSize) == -1)
@@ -200,8 +207,13 @@ int main()
 
             SLEEP();
 
-            // Change the connection way to way A
-            printf("INFO: Change the connection way to way A\n");
+            // Change congestion control to "cubic"
+            printf("INFO: Change congestion control to cubic\n");
+            if (setsockopt(sock, IPPROTO_TCP, TCP_CONGESTION, "cubic", 5) != 0)
+            {
+                printf("ERROR: setsockopt()");
+                return -1;
+            }
         }
         else
         {

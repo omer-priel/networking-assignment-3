@@ -13,6 +13,12 @@ install:
 	cd scripts
 	poetry install
 
+
+create-inputs:
+	rm -rf inputs
+	mkdir inputs
+	cd scripts && poetry run lorem_text --words 1000000 > ../inputs/input.txt
+
 create-inputs-size-1:
 	rm -rf inputs
 	mkdir inputs
@@ -26,7 +32,7 @@ create-inputs-size-2:
 create-inputs-size-3:
 	rm -rf inputs
 	mkdir inputs
-	cd scripts && poetry run lorem_text --words 10000000 > ../inputs/input.txt
+	cd scripts && poetry run lorem_text --words 100000000 > ../inputs/input.txt
 
 # units
 $(BIN_DIR):

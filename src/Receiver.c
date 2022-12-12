@@ -13,6 +13,7 @@
 #include <errno.h>
 #include <signal.h>
 
+#include <netinet/tcp.h>
 #include <time.h> // for measuring time
 
 // Flags
@@ -137,17 +138,9 @@ int main()
     socklen_t clientAddressLen = sizeof(clientAddress);
 
     char socketBuffer[SERVER_CHUNK_SIZE + 1];
-    int connectionWay = 1;
 
     while (1)
     {
-        if (connectionWay == 2)
-        {
-            // Change the connection way to way A
-            connectionWay = 1;
-            printf("INFO: Change the connection way to way A\n");
-        }
-
         // wating for client accept
         printf("INFO: Waiting for client accept\n");
 
@@ -171,13 +164,6 @@ int main()
             {
                 loadNextFile = 0;
 
-                if (connectionWay == 2)
-                {
-                    // Change the connection way to way A
-                    connectionWay = 1;
-                    printf("INFO: Change the connection way to way A\n");
-                }
-
                 // recve the first part of the file
                 int errorcode = app_recv_part(clientSocket, socketBuffer, &recvesTimeA);
 
@@ -193,9 +179,17 @@ int main()
 
                 if (errorcode != -1)
                 {
-                    // Change the connection way to way B
-                    connectionWay = 2;
-                    printf("INFO: Change the connection way to way B\n");
+                    // Change congestion control to "reno"
+                    printf("INFO: Change the connection way to way reno\n");
+                    if (setsockopt(clientSocket, IPPROTO_TCP, TCP_CONGESTION, "reno", 5) != 0)
+                    {
+                        printf("ERROR: setsockopt()");
+                        errorcode = -1;
+                    }
+                }
+
+                if (errorcode != -1)
+                {
 
                     // recve the second part of the file
                     errorcode = app_recv_part(clientSocket, socketBuffer, &recvesTimeB);
@@ -223,7 +217,17 @@ int main()
                     {
                         if (hasNext == 'Y')
                         {
-                            loadNextFile = 1;
+                            // Change congestion control to "reno"
+                            printf("INFO: Change the connection way to way cubic\n");
+                            if (setsockopt(clientSocket, IPPROTO_TCP, TCP_CONGESTION, "cubic", 5) != 0)
+                            {
+                                printf("ERROR: setsockopt()");
+                                close(clientSocket);
+                            }
+                            else
+                            {
+                                loadNextFile = 1;
+                            }
                         }
                         else
                         {
