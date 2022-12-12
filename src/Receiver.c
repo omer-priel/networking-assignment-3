@@ -47,11 +47,9 @@ int app_send(int sock, char *message, int messageLen)
     return 0;
 }
 
-int app_recv_part(int clientSocket, char *socketBuffer, long *averageTime)
+int app_recv_part(int clientSocket, char *socketBuffer, long *recvesTime)
 {
     int partSize = 0;
-
-    int recvesFramesCount = 0;
 
     clock_t startClock = clock();
     int recvBytesCount = recv(clientSocket, &partSize, sizeof(int), 0);
@@ -73,32 +71,22 @@ int app_recv_part(int clientSocket, char *socketBuffer, long *averageTime)
         }
 
         partSize -= recvBytesCount;
-        recvesFramesCount++;
     }
 
     if (partSize > 0)
     {
-        recvBytesCount = recv(clientSocket, socketBuffer, recvBytesCount, 0);
+        recvBytesCount = recv(clientSocket, socketBuffer, partSize, 0);
 
         if (recvBytesCount == -1)
         {
             printf("ERROR: recv() failed\n");
             return -1;
         }
-
-        recvesFramesCount++;
     }
 
-    if (recvesFramesCount > 0)
-    {
-        clock_t endClock = clock();
+    clock_t endClock = clock();
 
-        *averageTime = (endClock - startClock) / recvesFramesCount;
-    }
-    else
-    {
-        return -1;
-    }
+    *recvesTime = (endClock - startClock);
 
     return 0;
 }
@@ -148,7 +136,7 @@ int main()
     struct sockaddr_in clientAddress;
     socklen_t clientAddressLen = sizeof(clientAddress);
 
-    char socketBuffer[SERVER_CHUNK_SIZE];
+    char socketBuffer[SERVER_CHUNK_SIZE + 1];
     int connectionWay = 1;
 
     while (1)
@@ -175,8 +163,8 @@ int main()
         {
             printf("INFO: A new client connection accepted\n");
 
-            long averageTimeA;
-            long averageTimeB;
+            long recvesTimeA;
+            long recvesTimeB;
 
             int loadNextFile = 1;
             while (loadNextFile == 1)
@@ -191,14 +179,16 @@ int main()
                 }
 
                 // recve the first part of the file
-                int errorcode = app_recv_part(clientSocket, socketBuffer, &averageTimeA);
+                int errorcode = app_recv_part(clientSocket, socketBuffer, &recvesTimeA);
 
                 if (errorcode != -1)
                 {
+                    printf("INFO: The first hafe of the file was successfully recvied.\n");
+
                     // send the authentication
                     int idsXor = AUTHOR_A_ID_LAST_4 ^ AUTHOR_B_ID_LAST_4;
                     errorcode = app_send(clientSocket, (char *)&idsXor, sizeof(int));
-                    sleep(1);
+                    SLEEP();
                 }
 
                 if (errorcode != -1)
@@ -208,7 +198,7 @@ int main()
                     printf("INFO: Change the connection way to way B\n");
 
                     // recve the second part of the file
-                    errorcode = app_recv_part(clientSocket, socketBuffer, &averageTimeB);
+                    errorcode = app_recv_part(clientSocket, socketBuffer, &recvesTimeB);
                 }
 
                 if (errorcode == -1)
@@ -217,6 +207,8 @@ int main()
                 }
                 else
                 {
+                    printf("INFO: Second hafe of the file was successfully recvied.\n");
+
                     // check if to exist
                     char hasNext;
 
@@ -236,11 +228,11 @@ int main()
                         else
                         {
                             // Print out the times.
-                            printf("First part take: %ld\n", averageTimeA);
-                            printf("Second part take: %ld\n", averageTimeB);
+                            printf("First part take: %ld\n", recvesTimeA);
+                            printf("Second part take: %ld\n", recvesTimeB);
 
                             close(clientSocket);
-                            sleep(1);
+                            SLEEP();
                         }
                     }
                 }

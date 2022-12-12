@@ -1,5 +1,14 @@
 #pragma once
 
+// DEBUG
+#define DEBUG 1
+
+#if DEBUG
+#define SLEEP() sleep(1)
+#else
+#define SLEEP()
+#endif
+
 // The port that the server listens
 #define SERVER_PORT 5060
 

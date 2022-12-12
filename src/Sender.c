@@ -39,20 +39,20 @@ int load_input_file(char **partA, int *partASize, char **partB, int *partBSize)
     }
 
     fseek(file, 0, SEEK_END);
-    size_t fileSize = ftell(file);
+    int fileSize = (int)ftell(file);
     fseek(file, 0, SEEK_SET);
 
     *partASize = fileSize / 2;
     *partBSize = fileSize - *partASize;
 
-    *partA = malloc(sizeof(int) + (*partASize));
-    *partB = malloc(sizeof(int) + (*partBSize));
+    *partA = malloc(sizeof(int) + (*partASize) + 1);
+    *partB = malloc(sizeof(int) + (*partBSize) + 1);
 
     memcpy(*partA, partASize, sizeof(int));
     memcpy(*partB, partBSize, sizeof(int));
 
-    fread(*partA + sizeof(int), *partASize, *partASize, file);
-    fread(*partB + sizeof(int), *partBSize, *partBSize, file);
+    fread((*partA) + sizeof(int), 1, *partASize, file);
+    fread((*partB) + sizeof(int), 1, *partBSize, file);
 
     // close the file
     fclose(file);
@@ -132,6 +132,8 @@ int main()
         return -1;
     }
 
+    printf("DEBUG: A %d\n", 0);
+
     // Connenting to the server
     struct sockaddr_in serverAddress;
     int sock = connect_to_server(&serverAddress);
@@ -143,7 +145,7 @@ int main()
 
     printf("INFO: connected to server\n");
 
-    sleep(1);
+    SLEEP();
 
     int action = 1;
     while (action == 1)
@@ -156,7 +158,7 @@ int main()
 
         printf("INFO: First hafe of the file was successfully sent.\n");
 
-        sleep(1);
+        SLEEP();
 
         // recive the authentication
         int authentication = 0;
@@ -177,7 +179,7 @@ int main()
             return -1;
         }
 
-        sleep(1);
+        SLEEP();
 
         printf("INFO: Second hafe of the file was successfully sent.\n");
 
@@ -196,7 +198,7 @@ int main()
                 return -1;
             }
 
-            sleep(1);
+            SLEEP();
 
             // Change the connection way to way A
             printf("INFO: Change the connection way to way A\n");
