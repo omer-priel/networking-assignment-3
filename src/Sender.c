@@ -60,7 +60,7 @@ int load_input_file(char **partA, int *partASize, char **partB, int *partBSize)
     return 0;
 }
 
-int connect_to_server(struct sockaddr_in *serverAddress)
+inline int connect_to_server(struct sockaddr_in *serverAddress)
 {
     // create a client socket
     int sock = socket(AF_INET, SOCK_STREAM, 0);
@@ -95,7 +95,7 @@ int connect_to_server(struct sockaddr_in *serverAddress)
     return sock;
 }
 
-int app_send(int sock, char *message, int messageLen)
+inline int app_send(int sock, char *message, int messageLen)
 {
     int bytesSent = send(sock, message, messageLen, 0);
 
