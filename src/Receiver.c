@@ -1,6 +1,6 @@
-/*
-    Receiver
-*/
+/**
+ * Receiver entry point
+ */
 
 #include <stdio.h>
 
@@ -12,11 +12,10 @@
 #include <string.h>
 #include <errno.h>
 #include <signal.h>
-
 #include <netinet/tcp.h>
+
 #include <time.h> // for measuring time
 
-// Flags
 #include "config.h"
 
 // functions declarations
@@ -25,8 +24,17 @@ int app_recv_part(int clientSocket, char *socketBuffer, long *averageTime);
 int main();
 
 // functions implementations
+/**
+ * Send message over socket
+ *
+ * @param int sock socket
+ * @param char* message to send
+ * @param int messageLen length of the message
+ * @return 0 if sended -1 if the sending failed of not all the message sent
+ */
 inline int app_send(int sock, char *message, int messageLen)
 {
+    // sending the message
     int bytesSent = send(sock, message, messageLen, 0);
 
     if (-1 == bytesSent)
@@ -48,11 +56,22 @@ inline int app_send(int sock, char *message, int messageLen)
     return 0;
 }
 
+/**
+ * receive part (hafe) of file from the client
+ *
+ * @param int clientSocket client socket
+ * @param char* socketBuffer buffer to save the part
+ * @param int* recvesTime the time that take to get all the file
+ * @return 0 if recv the part, -1 - elsewhere
+ */
 int app_recv_part(int clientSocket, char *socketBuffer, long *recvesTime)
 {
     int partSize = 0;
 
+    // start to measure
     clock_t startClock = clock();
+
+    // receive the size of the part
     int recvBytesCount = recv(clientSocket, &partSize, sizeof(int), 0);
 
     if (recvBytesCount == -1)
@@ -61,6 +80,7 @@ int app_recv_part(int clientSocket, char *socketBuffer, long *recvesTime)
         return -1;
     }
 
+    // receive chuncks
     while (partSize >= SERVER_CHUNK_SIZE)
     {
         recvBytesCount = recv(clientSocket, socketBuffer, SERVER_CHUNK_SIZE, 0);
@@ -74,6 +94,7 @@ int app_recv_part(int clientSocket, char *socketBuffer, long *recvesTime)
         partSize -= recvBytesCount;
     }
 
+    // receive the rest of the part
     if (partSize > 0)
     {
         recvBytesCount = recv(clientSocket, socketBuffer, partSize, 0);
@@ -85,6 +106,7 @@ int app_recv_part(int clientSocket, char *socketBuffer, long *recvesTime)
         }
     }
 
+    // end the measure
     clock_t endClock = clock();
 
     *recvesTime = (endClock - startClock);
@@ -92,16 +114,20 @@ int app_recv_part(int clientSocket, char *socketBuffer, long *recvesTime)
     return 0;
 }
 
+/**
+ * entry point of the application
+ */
 int main()
 {
     signal(SIGPIPE, SIG_IGN);
 
-    // Open the listening (server) socket
-    int listeningSocket = -1;
+    // create listening socket
+    int listeningSocket = socket(AF_INET, SOCK_STREAM, 0);
 
-    if ((listeningSocket = socket(AF_INET, SOCK_STREAM, 0)) == -1)
+    if (listeningSocket == -1)
     {
         printf("ERROR: Could not create listening socket: %d\n", errno);
+        return -1;
     }
 
     // Reuse the address if the server socket on was closed
@@ -109,7 +135,9 @@ int main()
     int enableReuse = 1;
     if (setsockopt(listeningSocket, SOL_SOCKET, SO_REUSEADDR, &enableReuse, sizeof(int)) < 0)
     {
-        printf("ERROR: setsockopt() failed with error code : %d\n", errno);
+        printf("ERROR: setsockopt() failed with error code: %d\n", errno);
+        close(listeningSocket);
+        return -1;
     }
 
     // bind all the server addresses to the listening socket
@@ -139,6 +167,7 @@ int main()
 
     char socketBuffer[SERVER_CHUNK_SIZE + 1];
 
+    // the main loop
     while (1)
     {
         // wating for client accept
@@ -154,6 +183,7 @@ int main()
         }
         else
         {
+            // handel client requets
             printf("INFO: A new client connection accepted\n");
 
             long recvesTimeA;
@@ -183,14 +213,13 @@ int main()
                     printf("INFO: Change the connection way to way reno\n");
                     if (setsockopt(clientSocket, IPPROTO_TCP, TCP_CONGESTION, "reno", 5) != 0)
                     {
-                        printf("ERROR: setsockopt()");
+                        printf("ERROR: setsockopt() failed with error code: %d\n", errno);
                         errorcode = -1;
                     }
                 }
 
                 if (errorcode != -1)
                 {
-
                     // recve the second part of the file
                     errorcode = app_recv_part(clientSocket, socketBuffer, &recvesTimeB);
                 }
@@ -203,7 +232,7 @@ int main()
                 {
                     printf("INFO: Second hafe of the file was successfully recvied.\n");
 
-                    // check if to exist
+                    // check if the client finished
                     char hasNext;
 
                     int recvBytesCount = recv(clientSocket, &hasNext, sizeof(char), 0);
@@ -217,11 +246,11 @@ int main()
                     {
                         if (hasNext == 'Y')
                         {
-                            // Change congestion control to "reno"
+                            // Change congestion control to "cubic"
                             printf("INFO: Change the connection way to way cubic\n");
                             if (setsockopt(clientSocket, IPPROTO_TCP, TCP_CONGESTION, "cubic", 5) != 0)
                             {
-                                printf("ERROR: setsockopt()");
+                                printf("ERROR: setsockopt() failed with error code: %d\n", errno);
                                 close(clientSocket);
                             }
                             else

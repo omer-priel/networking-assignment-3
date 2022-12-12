@@ -1,6 +1,6 @@
-/*
-    Sender
-*/
+/**
+ * Sender entry point
+ */
 
 #include <stdio.h>
 
@@ -12,7 +12,6 @@
 #include <arpa/inet.h>
 #include <sys/socket.h>
 #include <unistd.h>
-
 #include <netinet/tcp.h>
 
 #include "config.h"
@@ -25,7 +24,7 @@ int main();
 
 // functions implementations
 /**
- * Load file into to parts when the first bytes of each parts saved the size of the part
+ * Load file into parts when the first bytes of each parts saved the size of the part
  */
 int load_input_file(char **partA, int *partASize, char **partB, int *partBSize)
 {
@@ -40,19 +39,24 @@ int load_input_file(char **partA, int *partASize, char **partB, int *partBSize)
         return -1;
     }
 
+    // get the size of the file
     fseek(file, 0, SEEK_END);
     int fileSize = (int)ftell(file);
     fseek(file, 0, SEEK_SET);
 
+    // set the parts size's
     *partASize = fileSize / 2;
     *partBSize = fileSize - *partASize;
 
+    // alocate memory for the parts
     *partA = malloc(sizeof(int) + (*partASize) + 1);
     *partB = malloc(sizeof(int) + (*partBSize) + 1);
 
+    // set the size of the parts in the start of the array
     memcpy(*partA, partASize, sizeof(int));
     memcpy(*partB, partBSize, sizeof(int));
 
+    // read the file
     fread((*partA) + sizeof(int), 1, *partASize, file);
     fread((*partB) + sizeof(int), 1, *partBSize, file);
 
@@ -62,6 +66,12 @@ int load_input_file(char **partA, int *partASize, char **partB, int *partBSize)
     return 0;
 }
 
+/**
+ * Connecting to the server
+ *
+ * @param sockaddr_in* serverAddress address of the server
+ * @return the socket
+ */
 inline int connect_to_server(struct sockaddr_in *serverAddress)
 {
     // create a client socket
@@ -69,7 +79,7 @@ inline int connect_to_server(struct sockaddr_in *serverAddress)
 
     if (sock == -1)
     {
-        printf("ERROR: Could not create socket : %d\n", errno);
+        printf("ERROR: Could not create socket: %d\n", errno);
         return -1;
     }
 
@@ -85,7 +95,7 @@ inline int connect_to_server(struct sockaddr_in *serverAddress)
         return -1;
     }
 
-    // conent to the server
+    // connect to the server
     if (connect(sock, (struct sockaddr *)serverAddress, sizeof(*serverAddress)) == -1)
     {
         printf("ERROR: connect() failed with error code: %d\n", errno);
@@ -97,8 +107,17 @@ inline int connect_to_server(struct sockaddr_in *serverAddress)
     return sock;
 }
 
+/**
+ * Send message over socket
+ *
+ * @param int sock socket
+ * @param char* message to send
+ * @param int messageLen length of the message
+ * @return 0 if sended -1 if the sending failed of not all the message sent
+ */
 inline int app_send(int sock, char *message, int messageLen)
 {
+    // sending the message
     int bytesSent = send(sock, message, messageLen, 0);
 
     if (-1 == bytesSent)
@@ -120,6 +139,9 @@ inline int app_send(int sock, char *message, int messageLen)
     return 0;
 }
 
+/**
+ * entry point of the application
+ */
 int main()
 {
     // Load the file
@@ -134,8 +156,6 @@ int main()
         return -1;
     }
 
-    printf("DEBUG: A %d\n", 0);
-
     // Connenting to the server
     struct sockaddr_in serverAddress;
     int sock = connect_to_server(&serverAddress);
@@ -149,7 +169,9 @@ int main()
 
     SLEEP();
 
-    int action = 1;
+    int action = 1; // 1 - run, 0 - close
+
+    // the main loop
     while (action == 1)
     {
         // Send first hafe of the files
@@ -176,7 +198,7 @@ int main()
         printf("INFO: Change congestion control to reno\n");
         if (setsockopt(sock, IPPROTO_TCP, TCP_CONGESTION, "reno", 5) != 0)
         {
-            printf("ERROR: setsockopt()");
+            printf("ERROR: setsockopt() failed with error code: %d\n", errno);
             return -1;
         }
 
@@ -198,27 +220,19 @@ int main()
 
         action = (line[0] == 'y') ? 1 : 0;
 
+        // send the anser to the Receiver
+        if (app_send(sock, (action == 1) ? "Y" : "N", 1) == -1)
+        {
+            return -1;
+        }
+
         if (action == 1)
         {
-            if (app_send(sock, "Y", 1) == -1)
-            {
-                return -1;
-            }
-
-            SLEEP();
-
             // Change congestion control to "cubic"
             printf("INFO: Change congestion control to cubic\n");
             if (setsockopt(sock, IPPROTO_TCP, TCP_CONGESTION, "cubic", 5) != 0)
             {
-                printf("ERROR: setsockopt()");
-                return -1;
-            }
-        }
-        else
-        {
-            if (app_send(sock, "N", 1) == -1)
-            {
+                printf("ERROR: setsockopt() failed with error code: %d\n", errno);
                 return -1;
             }
         }
@@ -226,6 +240,10 @@ int main()
 
     // close the socket
     close(sock);
+
+    // cleanup
+    free(partA);
+    free(partB);
 
     return 0;
 }

@@ -1,13 +1,21 @@
 #pragma once
 
-// DEBUG
+/**
+ * Config Flags and Builds
+ */
+
+/** Build */
+// Build Flugs
 #define DEBUG 0
 
+// Debug Macros
 #if DEBUG
 #define SLEEP() sleep(1)
 #else
 #define SLEEP()
 #endif
+
+/** Defines */
 
 // The port that the server listens
 #define SERVER_PORT 5060
@@ -28,5 +36,6 @@
 #define AUTHOR_A_ID 323024034
 #define AUTHOR_B_ID 207964859
 
+// last 4 digits of IDs of the authors of this project
 #define AUTHOR_A_ID_LAST_4 4034
 #define AUTHOR_B_ID_LAST_4 4859
