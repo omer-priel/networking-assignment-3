@@ -14,7 +14,7 @@
 #include <signal.h>
 #include <netinet/tcp.h>
 
-#include <time.h> // for measuring time
+#include <sys/time.h> // for measuring time
 
 #include "config.h"
 
@@ -69,7 +69,8 @@ int app_recv_part(int clientSocket, char *socketBuffer, long *recvesTime)
     int partSize = 0;
 
     // start to measure
-    clock_t startClock = clock();
+    struct timeval startClock;
+    gettimeofday(&startClock, NULL);
 
     // receive the size of the part
     int recvBytesCount = recv(clientSocket, &partSize, sizeof(int), 0);
@@ -107,9 +108,10 @@ int app_recv_part(int clientSocket, char *socketBuffer, long *recvesTime)
     }
 
     // end the measure
-    clock_t endClock = clock();
+    struct timeval endClock;
+    gettimeofday(&endClock, NULL);
 
-    *recvesTime = (endClock - startClock);
+    *recvesTime = (endClock.tv_usec - startClock.tv_usec);
 
     return 0;
 }
@@ -261,8 +263,8 @@ int main()
                         else
                         {
                             // Print out the times.
-                            printf("First part take: %ld\n", recvesTimeA);
-                            printf("Second part take: %ld\n", recvesTimeB);
+                            printf("First part take: %ld [ms]\n", recvesTimeA);
+                            printf("Second part take: %ld [ms]\n", recvesTimeB);
 
                             close(clientSocket);
                             SLEEP();
