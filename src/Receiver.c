@@ -232,6 +232,13 @@ int main()
                     recvesTimeOfAllFiles += recvesTime;
                 }
 
+                if (errorcode != -1)
+                {
+                    // known the sender that the filed loaded.
+                    errorcode = app_send(clientSocket, "W", 1);
+                    SLEEP();
+                }
+
                 if (errorcode == -1)
                 {
                     close(clientSocket);

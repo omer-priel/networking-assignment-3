@@ -212,6 +212,13 @@ int main()
 
         printf("INFO: Second hafe of the file was successfully sent.\n");
 
+        // wait until the server complit the loading
+        char temp;
+        if (recv(sock, &temp, 1, 0) == -1)
+        {
+            return -1;
+        }
+
         // ask the user if to send the file again
         printf("Send the file again [yes/no]? ");
 
