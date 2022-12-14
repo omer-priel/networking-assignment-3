@@ -64,7 +64,7 @@ inline int app_send(int sock, char *message, int messageLen)
  * @param int* recvesTime the time that take to get all the file
  * @return 0 if recv the part, -1 - elsewhere
  */
-int app_recv_part(int clientSocket, char *socketBuffer, long *recvesTime)
+int app_recv_part(int clientSocket, char *socketBuffer, suseconds_t *recvesTime)
 {
     int partSize = 0;
 
@@ -188,16 +188,21 @@ int main()
             // handel client requets
             printf("INFO: A new client connection accepted\n");
 
-            long recvesTimeA;
-            long recvesTimeB;
+            suseconds_t recvesTimeOfAllFiles = 0;
+            int recvesFilesCount = 0;
+
+            suseconds_t recvesTime;
 
             int loadNextFile = 1;
             while (loadNextFile == 1)
             {
                 loadNextFile = 0;
 
+                recvesFilesCount++;
+
                 // recve the first part of the file
-                int errorcode = app_recv_part(clientSocket, socketBuffer, &recvesTimeA);
+                int errorcode = app_recv_part(clientSocket, socketBuffer, &recvesTime);
+                recvesTimeOfAllFiles += recvesTime;
 
                 if (errorcode != -1)
                 {
@@ -223,7 +228,8 @@ int main()
                 if (errorcode != -1)
                 {
                     // recve the second part of the file
-                    errorcode = app_recv_part(clientSocket, socketBuffer, &recvesTimeB);
+                    errorcode = app_recv_part(clientSocket, socketBuffer, &recvesTime);
+                    recvesTimeOfAllFiles += recvesTime;
                 }
 
                 if (errorcode == -1)
@@ -262,9 +268,8 @@ int main()
                         }
                         else
                         {
-                            // Print out the times.
-                            printf("First part take: %ld [ms]\n", recvesTimeA);
-                            printf("Second part take: %ld [ms]\n", recvesTimeB);
+                            printf("Recves Time of the Files: %ld [ms]\n", recvesTimeOfAllFiles);
+                            printf("Recves Average Time of the Files: %ld [ms]\n", recvesTimeOfAllFiles / recvesFilesCount);
 
                             close(clientSocket);
                             SLEEP();
