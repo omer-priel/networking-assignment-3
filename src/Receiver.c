@@ -189,7 +189,7 @@ int main()
             printf("INFO: A new client connection accepted\n");
 
             suseconds_t recvesTimeOfAllFiles = 0;
-            int recvesFilesCount = 0;
+            int recvesPartsCount = 0;
 
             suseconds_t recvesTime;
 
@@ -198,11 +198,10 @@ int main()
             {
                 loadNextFile = 0;
 
-                recvesFilesCount++;
-
                 // recve the first part of the file
                 int errorcode = app_recv_part(clientSocket, socketBuffer, &recvesTime);
                 recvesTimeOfAllFiles += recvesTime;
+                recvesPartsCount++;
 
                 if (errorcode != -1)
                 {
@@ -230,6 +229,7 @@ int main()
                     // recve the second part of the file
                     errorcode = app_recv_part(clientSocket, socketBuffer, &recvesTime);
                     recvesTimeOfAllFiles += recvesTime;
+                    recvesPartsCount++;
                 }
 
                 if (errorcode != -1)
@@ -275,8 +275,8 @@ int main()
                         }
                         else
                         {
-                            printf("Recves Time of the Files: %ld [ms]\n", recvesTimeOfAllFiles);
-                            printf("Recves Average Time of the Files: %ld [ms]\n", recvesTimeOfAllFiles / recvesFilesCount);
+                            printf("Recves %d parts, in %ld [ms]\n", recvesPartsCount, recvesTimeOfAllFiles);
+                            printf("Recves Average Time of the Files: %ld [ms]\n", recvesTimeOfAllFiles / recvesPartsCount);
 
                             close(clientSocket);
                             SLEEP();
