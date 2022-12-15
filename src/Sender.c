@@ -48,7 +48,9 @@ int load_input_file(char **partA, int *partASize, char **partB, int *partBSize)
     *partASize = fileSize / 2;
     *partBSize = fileSize - *partASize;
 
-    // alocate memory for the parts
+    // alocate memory for the parts, buffer structure:
+    // 4 bytes - size of the part
+    // partXSize bytes - the part content
     *partA = malloc(sizeof(int) + (*partASize) + 1);
     *partB = malloc(sizeof(int) + (*partBSize) + 1);
 
@@ -101,8 +103,6 @@ inline int connect_to_server(struct sockaddr_in *serverAddress)
         printf("ERROR: connect() failed with error code: %d\n", errno);
         return -1;
     }
-
-    printf("connected to server\n");
 
     return sock;
 }

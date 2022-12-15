@@ -10,10 +10,9 @@ clean:
 	rm -rf bin "$(PROJECT_DIR)/Receiver" "$(PROJECT_DIR)/Sender"
 
 install:
-	cd scripts
-	poetry install
+	cd scripts && poetry install
 
-
+# utils
 create-inputs:
 	rm -rf inputs
 	mkdir inputs
