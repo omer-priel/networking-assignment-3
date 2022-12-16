@@ -12,7 +12,7 @@ make build
 
 ## Authors
 
-- Shlomit ???
+- Shlomit Ashkenazi
 - Omer Priel
 
 ## License
